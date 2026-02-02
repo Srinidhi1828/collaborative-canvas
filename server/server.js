@@ -1,21 +1,30 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("client"));
+/* ========= STATIC CLIENT ========= */
+app.use(express.static(path.join(__dirname, "../client")));
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/index.html"));
+});
+
+/* ========= STATE ========= */
 let history = [];
 let redoStack = [];
+
 const colors = ["red", "blue", "green", "purple", "orange"];
 
+/* ========= SOCKET ========= */
 io.on("connection", (socket) => {
   const userColor = colors[Math.floor(Math.random() * colors.length)];
-  socket.emit("init", { color: userColor });
 
+  socket.emit("init", { color: userColor });
   socket.emit("sync", history);
 
   socket.on("stroke", (stroke) => {
@@ -40,7 +49,7 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("cursor", {
       id: socket.id,
       color: userColor,
-      pos
+      pos,
     });
   });
 
@@ -49,6 +58,9 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+/* ========= START SERVER ========= */
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
